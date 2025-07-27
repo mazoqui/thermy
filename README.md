@@ -377,15 +377,11 @@ newgrp bluetooth  # Or log out and log back in
 
 ### Protocol Compatibility
 
-This CLI script uses the exact same communication protocol as the kitty-printer web project:
-
-- **CRC8 Calculation**: Same lookup table and algorithm from cat-protocol.ts
-- **Command Structure**: Identical command formatting and sequencing
-- **Bitmap Processing**: Same image processing and line encoding
+This CLI script uses the **CRC8 Calculation** based on cat-protocol.ts:
 
 ### Bluetooth Implementation
 
-The Bluetooth communication reuses the proven implementation from thermal_printer.py:
+The Bluetooth communication reuses the proven implementation from several projects for bluetooth thermal printers:
 
 - **Service Discovery**: Automatic discovery of compatible printers
 - **Characteristic Detection**: Automatic detection of write characteristics
@@ -408,12 +404,3 @@ The script is designed for compatibility with:
 - **Pillow**: 10.0.0+ (Image processing)
 
 These versions are tested to work reliably on Debian 12 (Orange Pi) systems.
-
-## License
-
-This project reuses code from:
-- **kitty-printer**: AGPL-3.0+ license
-- **cat-protocol.ts**: CC0-1.0 (public domain)
-- **iPrintUtility**: EUPL v1.2
-
-The same licenses apply to this CLI implementation.
