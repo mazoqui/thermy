@@ -1,0 +1,5 @@
+# Bluetooth Low Energy communication for thermal printers
+bleak>=0.21.1
+
+# Image processing and manipulation
+Pillow>=10.0.0
