@@ -428,3 +428,6 @@ The script is designed for compatibility with:
 - **Pillow**: 10.0.0+ (Image processing)
 
 These versions are tested to work reliably on Debian 12 (Orange Pi) systems.
+
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
