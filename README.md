@@ -44,6 +44,13 @@ sudo apt install python3 python3-pip python3-venv bluetooth bluez
 
 ### 2. Bluetooth Setup
 
+Add your user to the Bluetooth group:
+
+```bash
+sudo usermod -a -G bluetooth $USER
+# Log out and log back in, or use: newgrp bluetooth
+```
+
 Enable and start Bluetooth service:
 
 ```bash
@@ -55,13 +62,6 @@ sudo systemctl enable bluetooth
 
 # Check Bluetooth status
 sudo systemctl status bluetooth
-```
-
-Add your user to the Bluetooth group:
-
-```bash
-sudo usermod -a -G bluetooth $USER
-# Log out and log back in, or use: newgrp bluetooth
 ```
 
 ### 3. Python Environment
@@ -340,6 +340,30 @@ python3 thermy.py --image nonexistent.jpg --device AA:BB:CC:DD:EE:FF
 **"Bluetooth support not available" Error:**
 ```bash
 pip install bleak
+```
+
+**Useful Bluetooth utilities**
+
+```bash
+
+bluetoothctl list    # List local bluetooth interfaces
+bluetoothctl         # Enter the bluetooth client - or use inline commands
+power on             # Turn bluetooth interface on - or inline "bluetoothctl power on"
+scan on              # Scan devices around - or inline "bluetoothctl scan on"
+scan off             # Turn off the scan after get the device add ("bluetoothctl scan off")
+info <mac add>       # Show specific device information "bluetoothctl info <mac add>"
+pair <mac add>       # Pair with the device
+trust <mac add>      # Trust the device
+connect <mac add>    # Connect to the device
+exit                 # Exit cli
+
+# Example in a bash script:
+  #!/usr/bin/bash
+  bluetoothctl power on
+  bluetoothctl trust <mac add>
+  bluetoothctl disconnect <mac add>
+  bluetoothctl connect <mac add> 
+
 ```
 
 **"No compatible thermal printers found" during scan:**
