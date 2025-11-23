@@ -277,7 +277,8 @@ class ThermalPrinterCLI:
         "M01", "PR07", "PR02", 
         "GB01", "GB02", "GB03", "GB04", 
         "LY01", "LY02", "LY03", "LY10", 
-        "AI01", "GT01", "MX10"
+        "AI01", "GT01", "MX10",
+        "X6"
     ]
     
     def __init__(self):
