@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+dist/
+build/
+*.egg-info
+.DS_Store
+qr.png
+qr.svg

@@ -6,3 +6,6 @@ Pillow>=10.0.0
 
 # QR code generation
 qrcode>=7.4
+
+# MCP server for AI agent integration
+mcp>=1.0.0

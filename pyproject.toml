@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thermy"
+dynamic = ["version"]
+description = "CLI and library for mini Bluetooth thermal printers"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Hardware",
+]
+
+dependencies = [
+    "Pillow>=10.0.0",
+    "bleak>=0.21.1",
+]
+
+[project.optional-dependencies]
+qr = ["qrcode>=7.4"]
+mcp = ["mcp>=1.0.0"]
+all = ["qrcode>=7.4", "mcp>=1.0.0"]
+
+[project.scripts]
+thermy = "thermy_cli:main_sync"
+
+[project.urls]
+Homepage = "https://github.com/tentje/thermy"
+Repository = "https://github.com/tentje/thermy"
+
+[tool.setuptools]
+py-modules = ["thermy", "thermy_cli", "thermy_mcp"]
+
+[tool.setuptools.dynamic]
+version = {attr = "thermy.__version__"}
