@@ -23,6 +23,12 @@ except ImportError:
     BleakDBusError = Exception
     BleakError = Exception
 
+try:
+    import qrcode
+    QRCODE_AVAILABLE = True
+except ImportError:
+    QRCODE_AVAILABLE = False
+
 
 class CatProtocol:
     """Python implementation of cat-protocol.ts for thermal printer communication"""
@@ -793,6 +799,66 @@ class ThermalPrinterCLI:
         print("Image printed successfully!")
         return True
 
+    def generate_qr(self, data: str, box_size: int = 8) -> Image.Image:
+        """Generate a QR code image from data string"""
+        if not QRCODE_AVAILABLE:
+            raise RuntimeError("QR code support not available. Install with: pip install qrcode")
+
+        qr = qrcode.QRCode(
+            version=None,  # Auto-detect size
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=box_size,
+            border=4,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white").convert('RGB')
+
+        # Resize to fit paper width while maintaining aspect ratio
+        if img.width > self.paper_width:
+            scale = self.paper_width / img.width
+            img = img.resize((self.paper_width, int(img.height * scale)))
+        elif img.width < self.paper_width:
+            # Center on paper-width canvas
+            padded = Image.new("RGB", (self.paper_width, img.height), (255, 255, 255))
+            padded.paste(img, ((self.paper_width - img.width) // 2, 0))
+            img = padded
+
+        print(f"Generated QR code: {img.width}x{img.height}")
+        return img.convert('RGBA')
+
+    async def print_qr(self, data: str, speed: int = 45, energy: int = 8000) -> bool:
+        """Generate and print a QR code"""
+        if not self.printer:
+            print("Error: Printer not connected")
+            return False
+
+        print(f"Generating QR code for: {data}")
+        try:
+            bitmap = self.generate_qr(data)
+        except Exception as e:
+            print(f"Error generating QR code: {e}")
+            return False
+
+        print("Converting QR code to print data...")
+        lines = self.bitmap_to_print_data(bitmap, is_image=True)
+
+        print("Preparing printer...")
+        await self.printer.prepare(speed, energy)
+
+        print(f"Sending {len(lines)} lines to printer...")
+        for i, line in enumerate(lines):
+            await self.printer.draw(line)
+            if i % 50 == 0:
+                print(f"Progress: {i+1}/{len(lines)}")
+
+        print("Finishing print job...")
+        await self.printer.finish(50)
+
+        print("QR code printed successfully!")
+        return True
+
 
 def check_requirements():
     """Check if system requirements are met"""
@@ -815,6 +881,7 @@ async def main():
     parser.add_argument('--text', '-t', help='Text to print')
     parser.add_argument('--file', '-f', help='Text file to print')
     parser.add_argument('--image', '-i', help='Image file to print (PNG, JPG, etc.)')
+    parser.add_argument('--qr', help='Generate and print a QR code from text/URL')
     parser.add_argument('--device', '-d', help='Bluetooth device address')
     parser.add_argument('--font-size', type=int, default=16, help='Font size for text (default: 16)')
     parser.add_argument('--align', choices=['left', 'center', 'right'], default='center', help='Text alignment (default: center)')
@@ -891,16 +958,19 @@ async def main():
                     print(f"Error reading file {args.file}: {e}")
             else:
                 print(f"❌ File not found: {args.file}")
+        elif args.qr:
+            success = await printer_cli.print_qr(args.qr, args.speed, args.energy)
         elif args.image:
             success = await printer_cli.print_image(args.image, args.speed, args.energy)
         else:
-            print("❌ No content specified. Use --text, --file, or --image")
+            print("❌ No content specified. Use --text, --file, --image, or --qr")
             print("\nExamples:")
             print('  python3 thermy.py --text "Hello World" --device AA:BB:CC:DD:EE:FF')
             print('  python3 thermy.py --text "Left\\nAligned" --align left --device AA:BB:CC:DD:EE:FF')
             print('  python3 thermy.py --text "IMPORTANT" --invert --border 2 --font-size 24 --device AA:BB:CC:DD:EE:FF')
             print('  python3 thermy.py --text "WARNING" --border 3 --align center --device AA:BB:CC:DD:EE:FF')
             print('  python3 thermy.py --file document.txt --align center --border 1 --device AA:BB:CC:DD:EE:FF')
+            print('  python3 thermy.py --qr "https://example.com" --device AA:BB:CC:DD:EE:FF')
             print('  python3 thermy.py --image photo.jpg --device AA:BB:CC:DD:EE:FF')
         
         if success:

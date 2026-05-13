@@ -3,3 +3,6 @@ bleak>=0.21.1
 
 # Image processing and manipulation
 Pillow>=10.0.0
+
+# QR code generation
+qrcode>=7.4

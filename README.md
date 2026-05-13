@@ -11,6 +11,7 @@ It is built upon the core protocol and communication logic of the kitty-printer 
 
 - **Text Printing**: Print text with configurable font size
 - **Image Printing**: Print PNG, JPG, and other image formats
+- **QR Code Printing**: Generate and print QR codes from text or URLs
 - **File Support**: Print from text files
 - **Bluetooth Discovery**: Scan for compatible thermal printers
 - **Compatible Protocol**: Uses the same protocol as kitty-printer web project
@@ -187,6 +188,18 @@ Print contents of a text file:
 python3 thermy.py --file document.txt --device AA:BB:CC:DD:EE:FF
 ```
 
+### Print QR Code
+
+Generate and print a QR code from text or a URL:
+
+```bash
+# Print a QR code for a URL
+python3 thermy.py --qr "https://example.com" --device AA:BB:CC:DD:EE:FF
+
+# Print a QR code for plain text
+python3 thermy.py --qr "Hello, scan me!" --device AA:BB:CC:DD:EE:FF
+```
+
 ### Print Image
 
 Print an image file (PNG, JPG, etc.):
@@ -220,6 +233,7 @@ Options:
   --text TEXT, -t TEXT          Text to print
   --file FILE, -f FILE          Text file to print
   --image IMAGE, -i IMAGE       Image file to print
+  --qr TEXT                     Generate and print a QR code from text/URL
   --device ADDRESS, -d ADDRESS  Bluetooth device address
   --font-size SIZE             Font size for text (default: 16)
   --align {left,center,right}  Text alignment (default: center)
@@ -247,6 +261,9 @@ python3 thermy.py --file receipt.txt --device AA:BB:CC:DD:EE:FF
 
 # Print an image
 python3 thermy.py --image logo.png --device AA:BB:CC:DD:EE:FF
+
+# Print a QR code
+python3 thermy.py --qr "https://example.com" --device AA:BB:CC:DD:EE:FF
 ```
 
 ### Advanced Usage
@@ -269,6 +286,9 @@ python3 thermy.py --text "DANGER\nHIGH VOLTAGE" --border 5 --invert --font-size 
 
 # Simple framed receipt header
 python3 thermy.py --text "RECEIPT" --border 3 --align center --font-size 20 --device AA:BB:CC:DD:EE:FF
+
+# QR code for WiFi sharing
+python3 thermy.py --qr "WIFI:T:WPA;S:MyNetwork;P:MyPassword;;" --device AA:BB:CC:DD:EE:FF
 
 # High quality image (slower)
 python3 thermy.py --image photo.jpg --speed 20 --energy 10000 --device AA:BB:CC:DD:EE:FF
@@ -308,6 +328,9 @@ python3 thermy.py --text "Text Test - Hello World!" --device AA:BB:CC:DD:EE:FF
 # Test file printing
 echo "File test content" > test.txt
 python3 thermy.py --file test.txt --device AA:BB:CC:DD:EE:FF
+
+# Test QR code printing
+python3 thermy.py --qr "https://example.com" --device AA:BB:CC:DD:EE:FF
 
 # Test image printing (create a small test image first)
 python3 thermy.py --image test_image.png --device AA:BB:CC:DD:EE:FF
@@ -426,6 +449,7 @@ The script is designed for compatibility with:
 - **Python**: 3.11+ (as available on Debian 12)
 - **bleak**: 0.21.1+ (Bluetooth Low Energy)
 - **Pillow**: 10.0.0+ (Image processing)
+- **qrcode**: 7.4+ (QR code generation)
 
 These versions are tested to work reliably on Debian 12 (Orange Pi) systems.
 
