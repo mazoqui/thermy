@@ -11,6 +11,7 @@ import sys
 from typing import List, Optional, Union
 from PIL import Image, ImageDraw, ImageFont
 import struct
+import time
 
 try:
     from bleak import BleakClient, BleakScanner
@@ -283,7 +284,8 @@ class ThermalPrinterCLI:
         "M01", "PR07", "PR02", 
         "GB01", "GB02", "GB03", "GB04", 
         "LY01", "LY02", "LY03", "LY10", 
-        "AI01", "GT01", "MX10"
+        "AI01", "GT01", "MX10",
+        "X6"
     ]
     
     def __init__(self):
@@ -791,6 +793,7 @@ class ThermalPrinterCLI:
             await self.printer.draw(line)
             
             if i % 50 == 0:  # Progress indicator
+                time.sleep(1)
                 print(f"Progress: {i+1}/{len(lines)}")
         
         print("Finishing print job...")
@@ -983,6 +986,7 @@ async def main():
     
     finally:
         try:
+            time.sleep(10)
             await printer_cli.disconnect()
         except:
             pass  # Ignore disconnect errors
