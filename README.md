@@ -25,6 +25,8 @@ The same models supported by the original projects:
 - **JX Series**: JX001, JX002, JX003, JX004, JX005, JX006  
 - **Other Models**: M01, PR02, PR07, GB01, GB02, GB03, GB04, LY01, LY02, LY03, LY10, AI01, GT01, MX10
 
+The list lives in `config.json` (`supported_printers`) — see [Configuration](#configuration) to add a new model without touching the code.
+
 ## Requirements
 
 - **Linux System**: Debian 12 (Orange Pi) or compatible
@@ -95,6 +97,47 @@ Check if everything is working:
 ```bash
 python3 thermy.py --check-requirements
 ```
+
+## Configuration
+
+Runtime settings live in `config.json`, alongside `thermy.py`. The script loads it automatically on startup; CLI flags (e.g. `--font-size`, `--speed`) still override the file when given.
+
+Point at a different file with `--config`:
+
+```bash
+python3 thermy.py --config /path/to/my-config.json --scan
+```
+
+### What's in the file
+
+| Key | Purpose |
+| --- | --- |
+| `supported_printers` | Bluetooth name prefixes the scanner accepts. Add new models here. |
+| `bluetooth.write_uuids` / `service_uuids` | GATT UUIDs probed when connecting. |
+| `bluetooth.scan_timeout_seconds` | How long `--scan` listens for advertisements. |
+| `bluetooth.connect_timeout_seconds` | Timeout for the initial GATT connect. |
+| `printer.paper_width` | Paper width in pixels (most cat printers = 384). |
+| `printer.mtu` | Bluetooth write buffer size. |
+| `printer.default_model` | Model name used when initializing the protocol; affects compression. Use `GB03` or any `MX*` to enable the "new model" code path. |
+| `printer.extra_feed` | Extra paper fed after each job. |
+| `print_defaults.font_size` / `speed` / `energy` / `align` | Defaults for the matching CLI flags. |
+| `fonts` | Ordered list of font file paths; first one that loads is used. |
+| `qr.box_size` / `border` | QR module size (pixels per dot) and quiet-zone width. |
+
+Protocol-level constants (CRC table, command bytes, lattice payloads) are **not** in the config — they are part of the cat-printer protocol spec and live in code.
+
+### Adding a new printer model
+
+If you have a printer whose name prefix isn't in the default list, append it to `supported_printers`:
+
+```json
+"supported_printers": [
+  "XW001", "...", "C9",
+  "YOUR_MODEL"
+]
+```
+
+Then run `--scan` again.
 
 ## Usage
 
@@ -229,18 +272,19 @@ python3 thermy.py --text "High Quality" --speed 20 --energy 10000 --device AA:BB
 python3 thermy.py [OPTIONS]
 
 Options:
+  --config PATH                 Path to config file (default: config.json next to script)
   --scan, -s                    Scan for available printers
   --text TEXT, -t TEXT          Text to print
   --file FILE, -f FILE          Text file to print
   --image IMAGE, -i IMAGE       Image file to print
   --qr TEXT                     Generate and print a QR code from text/URL
   --device ADDRESS, -d ADDRESS  Bluetooth device address
-  --font-size SIZE             Font size for text (default: 16)
-  --align {left,center,right}  Text alignment (default: center)
+  --font-size SIZE             Font size for text (default from config)
+  --align {left,center,right}  Text alignment (default from config)
   --invert                     Invert colors: white text on black background
   --border {1-10}              Add border frame (1-10 pixels thick)
-  --speed SPEED                Print speed 10-90 (default: 35)
-  --energy ENERGY              Energy level (default: 8000)
+  --speed SPEED                Print speed 10-90 (default from config)
+  --energy ENERGY              Energy level (default from config)
   --check-requirements         Check system requirements
   --help, -h                   Show help message
 ```

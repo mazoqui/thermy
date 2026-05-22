@@ -1,0 +1,46 @@
+{
+  "supported_printers": [
+    "XW001", "XW002", "XW003", "XW004", "XW005", "XW006", "XW007", "XW008", "XW009",
+    "JX001", "JX002", "JX003", "JX004", "JX005", "JX006",
+    "M01", "PR07", "PR02",
+    "GB01", "GB02", "GB03", "GB04",
+    "LY01", "LY02", "LY03", "LY10",
+    "AI01", "GT01", "MX10",
+    "X6", "C9"
+  ],
+  "bluetooth": {
+    "write_uuids": [
+      "0000AE01-0000-1000-8000-00805F9B34FB",
+      "0000FF02-0000-1000-8000-00805F9B34FB",
+      "0000AB01-0000-1000-8000-00805F9B34FB"
+    ],
+    "service_uuids": [
+      "0000AE00-0000-1000-8000-00805F9B34FB",
+      "0000FF00-0000-1000-8000-00805F9B34FB",
+      "0000AB00-0000-1000-8000-00805F9B34FB"
+    ],
+    "scan_timeout_seconds": 30,
+    "connect_timeout_seconds": 10
+  },
+  "printer": {
+    "paper_width": 384,
+    "mtu": 200,
+    "default_model": "GB01",
+    "extra_feed": 50
+  },
+  "print_defaults": {
+    "font_size": 16,
+    "speed": 35,
+    "energy": 8000,
+    "align": "center"
+  },
+  "fonts": [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+    "/System/Library/Fonts/Monaco.ttf"
+  ],
+  "qr": {
+    "box_size": 8,
+    "border": 4
+  }
+}

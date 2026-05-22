@@ -6,12 +6,22 @@ Command-line interface for Mini Bluetooth Thermal Printers
 
 import asyncio
 import argparse
+import json
 import os
 import sys
+from pathlib import Path
 from typing import List, Optional, Union
 from PIL import Image, ImageDraw, ImageFont
 import struct
 import time
+
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
+
+
+def load_config(path: str) -> dict:
+    """Load configuration from a JSON file."""
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 try:
     from bleak import BleakClient, BleakScanner
@@ -120,11 +130,11 @@ class CatProtocol:
 class CatPrinter:
     """Python implementation of CatPrinter class from cat-protocol.ts"""
     
-    def __init__(self, model: str, write_func, dry_run: bool = False):
+    def __init__(self, model: str, write_func, dry_run: bool = False, mtu: int = 200):
         self.model = model
         self.write = write_func
         self.dry_run = dry_run
-        self.mtu = 200
+        self.mtu = mtu
         self.buffer = bytearray(self.mtu)
         self.buffer_size = 0
         self.state = {
@@ -263,51 +273,43 @@ class CatPrinter:
 
 class ThermalPrinterCLI:
     """Main CLI class combining cat-protocol with thermal_printer.py Bluetooth handling"""
-    
-    # Bluetooth service and characteristic UUIDs from thermal_printer.py
-    WRITE_UUID_GUIDS = [
-        "0000AE01-0000-1000-8000-00805F9B34FB",
-        "0000FF02-0000-1000-8000-00805F9B34FB", 
-        "0000AB01-0000-1000-8000-00805F9B34FB"
-    ]
-    
-    SERVICE_UUID_GUIDS = [
-        "0000AE00-0000-1000-8000-00805F9B34FB",
-        "0000FF00-0000-1000-8000-00805F9B34FB",
-        "0000AB00-0000-1000-8000-00805F9B34FB"
-    ]
-    
-    # Supported printer models (from thermal_printer.py)
-    SUPPORTED_PRINTERS = [
-        "XW001", "XW002", "XW003", "XW004", "XW005", "XW006", "XW007", "XW008", "XW009",
-        "JX001", "JX002", "JX003", "JX004", "JX005", "JX006", 
-        "M01", "PR07", "PR02", 
-        "GB01", "GB02", "GB03", "GB04", 
-        "LY01", "LY02", "LY03", "LY10", 
-        "AI01", "GT01", "MX10",
-        "X6"
-    ]
-    
-    def __init__(self):
+
+    def __init__(self, config: dict):
+        self.config = config
+        self.supported_printers = config["supported_printers"]
+        self.write_uuids = config["bluetooth"]["write_uuids"]
+        self.service_uuids = config["bluetooth"]["service_uuids"]
+        self.scan_timeout = config["bluetooth"]["scan_timeout_seconds"]
+        self.connect_timeout = config["bluetooth"]["connect_timeout_seconds"]
+        self.paper_width = config["printer"]["paper_width"]
+        self.mtu = config["printer"]["mtu"]
+        self.default_model = config["printer"]["default_model"]
+        self.extra_feed = config["printer"]["extra_feed"]
+        self.fonts = config["fonts"]
+        self.qr_box_size = config["qr"]["box_size"]
+        self.qr_border = config["qr"]["border"]
+
         self.client: Optional[BleakClient] = None
         self.write_characteristic = None
         self.printer: Optional[CatPrinter] = None
-        self.paper_width = 384  # Default paper width in pixels
         
-    async def scan_devices(self, timeout: int = 30) -> List[tuple]:
+    async def scan_devices(self, timeout: Optional[int] = None) -> List[tuple]:
         """Scan for compatible thermal printers (from thermal_printer.py)"""
         if not BLEAK_AVAILABLE:
             print("Error: Bluetooth support not available. Install with: pip install bleak")
             return []
-        
+
+        if timeout is None:
+            timeout = self.scan_timeout
+
         print("Scanning for thermal printers...")
-        
+
         try:
             devices = await BleakScanner.discover(timeout=timeout)
-            
+
             compatible_devices = []
             for device in devices:
-                if device.name and any(printer in device.name for printer in self.SUPPORTED_PRINTERS):
+                if device.name and any(printer in device.name for printer in self.supported_printers):
                     compatible_devices.append((device.name, device.address))
                     print(f"Found compatible printer: {device.name} ({device.address})")
             
@@ -330,15 +332,15 @@ class ThermalPrinterCLI:
         print(f"Connecting to {device_address}...")
         
         try:
-            self.client = BleakClient(device_address, timeout=10)
+            self.client = BleakClient(device_address, timeout=self.connect_timeout)
             await self.client.connect()
-            
+
             if self.client.is_connected:
                 print(f"Connected to printer at {device_address}")
                 await self._find_write_characteristic()
-                
+
                 # Initialize CatPrinter with write function
-                self.printer = CatPrinter("GB01", self._write_to_characteristic)
+                self.printer = CatPrinter(self.default_model, self._write_to_characteristic, mtu=self.mtu)
                 return True
             else:
                 print(f"Failed to connect to {device_address}")
@@ -354,7 +356,7 @@ class ThermalPrinterCLI:
         
         for service in services:
             for char in service.characteristics:
-                if char.uuid.upper() in [uuid.upper() for uuid in self.WRITE_UUID_GUIDS]:
+                if char.uuid.upper() in [uuid.upper() for uuid in self.write_uuids]:
                     try:
                         # Test the characteristic
                         test_cmd = bytes([0x51, 0x78, 0xa8, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff])
@@ -401,18 +403,16 @@ class ThermalPrinterCLI:
         """Convert text to bitmap image matching web app behavior"""
         margin = 10
         
-        # Try to load a font (prefer sans-serif like web app)
-        try:
-            # Try DejaVu Sans (similar to web default sans-serif)
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
-        except:
+        # Try each configured font path in order, fall back to PIL's default
+        font = None
+        for font_path in self.fonts:
             try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", font_size)
-            except:
-                try:
-                    font = ImageFont.truetype("/System/Library/Fonts/Monaco.ttf", font_size)
-                except:
-                    font = ImageFont.load_default()
+                font = ImageFont.truetype(font_path, font_size)
+                break
+            except (OSError, IOError):
+                continue
+        if font is None:
+            font = ImageFont.load_default()
         
         # Calculate text dimensions (handle multiline properly)
         lines = text.split('\n')
@@ -764,8 +764,8 @@ class ThermalPrinterCLI:
                 print(f"Progress: {i+1}/{len(lines)}")
         
         print("Finishing print job...")
-        await self.printer.finish(50)  # Feed some extra paper
-        
+        await self.printer.finish(self.extra_feed)
+
         print("Text printed successfully!")
         return True
     
@@ -797,21 +797,24 @@ class ThermalPrinterCLI:
                 print(f"Progress: {i+1}/{len(lines)}")
         
         print("Finishing print job...")
-        await self.printer.finish(50)  # Feed some extra paper
-        
+        await self.printer.finish(self.extra_feed)
+
         print("Image printed successfully!")
         return True
 
-    def generate_qr(self, data: str, box_size: int = 8) -> Image.Image:
+    def generate_qr(self, data: str, box_size: Optional[int] = None) -> Image.Image:
         """Generate a QR code image from data string"""
         if not QRCODE_AVAILABLE:
             raise RuntimeError("QR code support not available. Install with: pip install qrcode")
+
+        if box_size is None:
+            box_size = self.qr_box_size
 
         qr = qrcode.QRCode(
             version=None,  # Auto-detect size
             error_correction=qrcode.constants.ERROR_CORRECT_M,
             box_size=box_size,
-            border=4,
+            border=self.qr_border,
         )
         qr.add_data(data)
         qr.make(fit=True)
@@ -857,7 +860,7 @@ class ThermalPrinterCLI:
                 print(f"Progress: {i+1}/{len(lines)}")
 
         print("Finishing print job...")
-        await self.printer.finish(50)
+        await self.printer.finish(self.extra_feed)
 
         print("QR code printed successfully!")
         return True
@@ -879,21 +882,38 @@ def check_requirements():
 
 
 async def main():
+    # Pre-parse just --config so the rest of the parser can use config-driven defaults
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument('--config', default=str(DEFAULT_CONFIG_PATH))
+    pre_args, _ = pre_parser.parse_known_args()
+
+    try:
+        config = load_config(pre_args.config)
+    except FileNotFoundError:
+        print(f"❌ Config file not found: {pre_args.config}")
+        return
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON in config file {pre_args.config}: {e}")
+        return
+
+    defaults = config["print_defaults"]
+
     parser = argparse.ArgumentParser(description='Thermal Printer CLI - kitty-printer compatible')
+    parser.add_argument('--config', default=str(DEFAULT_CONFIG_PATH), help='Path to config file (default: config.json next to script)')
     parser.add_argument('--scan', '-s', action='store_true', help='Scan for available printers')
     parser.add_argument('--text', '-t', help='Text to print')
     parser.add_argument('--file', '-f', help='Text file to print')
     parser.add_argument('--image', '-i', help='Image file to print (PNG, JPG, etc.)')
     parser.add_argument('--qr', help='Generate and print a QR code from text/URL')
     parser.add_argument('--device', '-d', help='Bluetooth device address')
-    parser.add_argument('--font-size', type=int, default=16, help='Font size for text (default: 16)')
-    parser.add_argument('--align', choices=['left', 'center', 'right'], default='center', help='Text alignment (default: center)')
+    parser.add_argument('--font-size', type=int, default=defaults["font_size"], help=f'Font size for text (default: {defaults["font_size"]})')
+    parser.add_argument('--align', choices=['left', 'center', 'right'], default=defaults["align"], help=f'Text alignment (default: {defaults["align"]})')
     parser.add_argument('--invert', action='store_true', help='Invert colors: white text on black background')
     parser.add_argument('--border', type=int, choices=list(range(1, 11)), help='Add border frame around text (1-10 pixels thick)')
-    parser.add_argument('--speed', type=int, default=35, help='Print speed (10-90, lower=better quality)')
-    parser.add_argument('--energy', type=int, default=8000, help='Energy level (default: 8000)')
+    parser.add_argument('--speed', type=int, default=defaults["speed"], help=f'Print speed (10-90, lower=better quality, default: {defaults["speed"]})')
+    parser.add_argument('--energy', type=int, default=defaults["energy"], help=f'Energy level (default: {defaults["energy"]})')
     parser.add_argument('--check-requirements', action='store_true', help='Check system requirements')
-    
+
     args = parser.parse_args()
     
     # Check requirements if requested
@@ -918,7 +938,7 @@ async def main():
         print("\nRun --check-requirements for help.")
         return
     
-    printer_cli = ThermalPrinterCLI()
+    printer_cli = ThermalPrinterCLI(config)
     
     if args.scan:
         devices = await printer_cli.scan_devices()
