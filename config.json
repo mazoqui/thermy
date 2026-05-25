@@ -20,7 +20,8 @@
       "0000AB00-0000-1000-8000-00805F9B34FB"
     ],
     "scan_timeout_seconds": 30,
-    "connect_timeout_seconds": 10
+    "connect_timeout_seconds": 10,
+    "device": ""
   },
   "printer": {
     "paper_width": 384,

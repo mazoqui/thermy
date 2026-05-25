@@ -905,7 +905,8 @@ async def main():
     parser.add_argument('--file', '-f', help='Text file to print')
     parser.add_argument('--image', '-i', help='Image file to print (PNG, JPG, etc.)')
     parser.add_argument('--qr', help='Generate and print a QR code from text/URL')
-    parser.add_argument('--device', '-d', help='Bluetooth device address')
+    default_device = config["bluetooth"].get("device", "") or None
+    parser.add_argument('--device', '-d', default=default_device, help='Bluetooth device address')
     parser.add_argument('--font-size', type=int, default=defaults["font_size"], help=f'Font size for text (default: {defaults["font_size"]})')
     parser.add_argument('--align', choices=['left', 'center', 'right'], default=defaults["align"], help=f'Text alignment (default: {defaults["align"]})')
     parser.add_argument('--invert', action='store_true', help='Invert colors: white text on black background')
@@ -956,6 +957,7 @@ async def main():
         print("Options:")
         print("  1. Run --scan to find available printers")
         print("  2. Use --device AA:BB:CC:DD:EE:FF with a known address")
+        print("  3. Set a default in config.json: bluetooth.device")
         return
     
     # Connect to printer

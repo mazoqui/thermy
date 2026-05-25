@@ -116,6 +116,7 @@ python3 thermy.py --config /path/to/my-config.json --scan
 | `bluetooth.write_uuids` / `service_uuids` | GATT UUIDs probed when connecting. |
 | `bluetooth.scan_timeout_seconds` | How long `--scan` listens for advertisements. |
 | `bluetooth.connect_timeout_seconds` | Timeout for the initial GATT connect. |
+| `bluetooth.device` | Default device address used when `--device` is not given. |
 | `printer.paper_width` | Paper width in pixels (most cat printers = 384). |
 | `printer.mtu` | Bluetooth write buffer size. |
 | `printer.default_model` | Model name used when initializing the protocol; affects compression. Use `GB03` or any `MX*` to enable the "new model" code path. |
@@ -278,7 +279,7 @@ Options:
   --file FILE, -f FILE          Text file to print
   --image IMAGE, -i IMAGE       Image file to print
   --qr TEXT                     Generate and print a QR code from text/URL
-  --device ADDRESS, -d ADDRESS  Bluetooth device address
+  --device ADDRESS, -d ADDRESS  Bluetooth device address (default from config)
   --font-size SIZE             Font size for text (default from config)
   --align {left,center,right}  Text alignment (default from config)
   --invert                     Invert colors: white text on black background
